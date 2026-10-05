@@ -73,4 +73,4 @@ fi
 
 open "$APP"
 echo "Built and launched: $APP"
-echo "Look for the cat icon in the menu bar."
+echo "Look for the paw print icon in the menu bar."

@@ -11,13 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem = item
         if let button = item.button {
-            // The cat symbol needs macOS 14; older systems get a paw print.
-            for name in ["cat.fill", "cat", "pawprint.fill"] {
-                if let image = NSImage(systemSymbolName: name, accessibilityDescription: "Claude Code usage") {
-                    button.image = image
-                    break
-                }
-            }
+            // pawprint.fill is available since macOS 12, so no fallback is needed.
+            button.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "Claude Code usage")
             button.imagePosition = .imageOnly
         }
         menu.delegate = self
