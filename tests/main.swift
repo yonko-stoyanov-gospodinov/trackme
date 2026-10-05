@@ -467,6 +467,23 @@ do {
     let text = String(data: try! summary.json(), encoding: .utf8)!
     check(text == String(data: try! summary.json(), encoding: .utf8)!, "stable output")
     check(text.hasPrefix("{\"all\""), "keys sorted: \(text.prefix(20))")
+    check(object["since"] == nil, "no since key without a since day")
+
+    // With a since day the total is the spend from that day on, per customer and overall.
+    snap.days = [DayTotal(dayStart: 86400 * 1, totals: Totals(cost: 100)),
+                 DayTotal(dayStart: 86400 * 2, totals: Totals(cost: 40)),
+                 DayTotal(dayStart: 86400 * 3, totals: Totals(cost: 5.5))]
+    snap.customers[0].days = [DayTotal(dayStart: 86400 * 1, totals: Totals(cost: 90)),
+                              DayTotal(dayStart: 86400 * 3, totals: Totals(cost: 3.2))]
+    let sinceSummary = StatusSummary(snapshot: snap, sinceStart: 86400 * 2, sinceLabel: "Jan 3, 1970",
+                                     now: Date(timeIntervalSince1970: 1000))
+    check(sinceSummary.since == "Jan 3, 1970", "since label kept")
+    check(sinceSummary.all == StatusSummary.Spend(today: 5.5, total: 45.5), "overall since total: \(sinceSummary.all)")
+    check(sinceSummary.customers["vm"] == StatusSummary.Spend(today: 3.2, total: 3.2), "customer since total: \(String(describing: sinceSummary.customers["vm"]))")
+    check(sinceSummary.customers["Other"] == StatusSummary.Spend(today: 0.5, total: 0), "customer with no days since: \(String(describing: sinceSummary.customers["Other"]))")
+    let sinceObject = try! JSONSerialization.jsonObject(with: try! sinceSummary.json()) as! [String: Any]
+    check(sinceObject["since"] as? String == "Jan 3, 1970", "since label in the file")
+    check((sinceObject["all"] as! [String: Double])["total"] == 45.5, "since total in the file")
 }
 
 // MARK: Hook settings

@@ -64,6 +64,7 @@ final class AppModel: ObservableObject {
         didSet {
             if let s = since { UserDefaults.standard.set(s.timeIntervalSince1970, forKey: "since") }
             else { UserDefaults.standard.removeObject(forKey: "since") }
+            writeStatusSummary()
         }
     }
     @Published var now = Date()
@@ -431,10 +432,14 @@ final class AppModel: ObservableObject {
     }
 
     /// Exports the current snapshot for the status line script. Written on every refresh,
-    /// even when nothing changed, so the script can tell that the app is running.
+    /// even when nothing changed, so the script can tell that the app is running, and when
+    /// the since day changes, so the line follows the widget's total.
     private func writeStatusSummary() {
         if loading { return }
-        try? StatusSummary(snapshot: snapshot, now: now).write(to: AppModel.statusSummaryPath)
+        let start = since.map { Calendar.current.startOfDay(for: $0).timeIntervalSince1970 }
+        let label = since.map { Dates.calendarDay.string(from: $0) }
+        try? StatusSummary(snapshot: snapshot, sinceStart: start, sinceLabel: label, now: now)
+            .write(to: AppModel.statusSummaryPath)
     }
 
     /// Opens prices.json in the default editor, creating it from the built-in table first.

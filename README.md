@@ -51,7 +51,7 @@ The widget has a tab per customer. **vm** and **ps** are listed from the start; 
 
 ## Spend since a day
 
-Choose **Since…** in the menu bar menu to pick a day. The big figure then shows the spend from the start of that day until now (for the selected customer), in place of today's figure. **Reset since date** goes back to the normal view. The date is kept until it is reset.
+Choose **Since…** in the menu bar menu to pick a day. The big figure then shows the spend from the start of that day until now (for the selected customer), in place of today's figure, and the status line's total becomes the spend since that day as well. **Reset since date** goes back to the normal view. The date is kept until it is reset.
 
 ## Keeping the Mac awake
 
@@ -78,7 +78,7 @@ Two guards keep a crashed session from holding the Mac awake forever: the hook r
 ~/devtools/trackme (main ✔)
 ```
 
-The first line is the context window fill (bar, percent, tokens used of the window; green under 50%, yellow under 80%, red above), the model, and the spend of the session's customer today and over all the transcripts kept. The second is the folder Claude Code runs in, with the home folder shortened to `~`, and the git branch with ✔ for a clean tree or ✗ when there are uncommitted changes. Install it with
+The first line is the context window fill (bar, percent, tokens used of the window; green under 50%, yellow under 80%, red above), the model, and the spend of the session's customer today and over all the transcripts kept (or since the day chosen with **Since…**, which the line then names). The second is the folder Claude Code runs in, with the home folder shortened to `~`, and the git branch with ✔ for a clean tree or ✗ when there are uncommitted changes. Install it with
 
 ```sh
 ./scripts/statusline.sh install
@@ -86,7 +86,7 @@ The first line is the context window fill (bar, percent, tokens used of the wind
 
 which points the `statusLine` setting in `~/.claude/settings.json` (or the first folder in `CLAUDE_CONFIG_DIR`) at the script, keeping the file as it was in `settings.json.before-trackme` the first time. Claude Code has one status line, so a status line already configured is replaced; `remove` takes the script out again. Sessions already running pick it up when restarted.
 
-Claude Code runs the script after every assistant message and gives it the context, model and folder on stdin. The script reads the branch and whether the tree is clean with git. The spend comes from the app: after every scan it writes each customer's today and all-time totals, and which customer each session belongs to, to `~/Library/Application Support/trackme/status.json`. The script only reads that file, so it never scans a transcript and finishes in well under a tenth of a second. The customer is the one the app grouped the session under; a session the app has not scanned yet is placed by its `--name`. When the app is not running the line shows the session's own cost instead, and **stale** appears when the file is more than two minutes old.
+Claude Code runs the script after every assistant message and gives it the context, model and folder on stdin. The script reads the branch and whether the tree is clean with git. The spend comes from the app: after every scan, and whenever the since day changes, it writes each customer's today and all-time (or since-day) totals, and which customer each session belongs to, to `~/Library/Application Support/trackme/status.json`. The script only reads that file, so it never scans a transcript and finishes in well under a tenth of a second. The customer is the one the app grouped the session under; a session the app has not scanned yet is placed by its `--name`. When the app is not running the line shows the session's own cost instead, and **stale** appears when the file is more than two minutes old.
 
 The script needs `jq`, which macOS 15 and later include.
 
