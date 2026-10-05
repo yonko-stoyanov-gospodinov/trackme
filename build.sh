@@ -1,9 +1,9 @@
 #!/bin/sh
 # Builds "trackme.app" using the Xcode command line tools (no Xcode project needed).
 #
-#   sh build.sh            build and launch from ./build
-#   sh build.sh install    build, copy to /Applications, launch from there
-#   sh build.sh test       run the engine tests
+#   ./build.sh            build and launch from ./build
+#   ./build.sh install    build, copy to /Applications, launch from there
+#   ./build.sh test       run the engine tests
 set -e
 cd "$(dirname "$0")"
 
@@ -13,7 +13,7 @@ if ! xcrun --find swiftc >/dev/null 2>&1; then
 fi
 
 if [ "$1" = "test" ]; then
-    exec sh Tests/run.sh
+    exec sh tests/run.sh
 fi
 
 APP="build/trackme.app"
@@ -31,7 +31,7 @@ echo "Compiling..."
 if ! swiftc -swift-version 5 -O \
         -target "$(uname -m)-apple-macos12.0" \
         -o "$APP/Contents/MacOS/trackme" \
-        Sources/Core/*.swift Sources/App/*.swift >> "$LOG" 2>&1; then
+        sources/core/*.swift sources/app/*.swift >> "$LOG" 2>&1; then
     cat "$LOG"
     echo "BUILD FAILED" >> "$LOG"
     echo
