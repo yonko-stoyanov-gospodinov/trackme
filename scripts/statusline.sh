@@ -1,6 +1,7 @@
 #!/bin/sh
 # Claude Code status line: context fill, model, and the spend of the session's customer
-# (today and all time) as computed by the trackme app on the first line; the folder and git
+# (today and all time, or since the day chosen in the app) as computed by the trackme app on
+# the first line; the folder and git
 # branch, with a tick for a clean tree, on the second.
 #
 #   ./statusline.sh install    point Claude Code's statusLine setting at this script
@@ -96,7 +97,8 @@ printf '%s' "$input" | jq -r --slurpfile st "$status" --arg branch "$branch" --a
            ((.cost.total_cost_usd // 0 | money) + " this session" | dim) + " " + ("trackme not running" | paint("31"))
        else
            ($s.customers[$customer] // {today: 0, total: 0}) as $sp
-           | ($customer | bold) + " " + ($sp.today | money) + (" today" | dim) + " · " + ($sp.total | money) + (" total" | dim)
+           | ($customer | bold) + " " + ($sp.today | money) + (" today" | dim) + " · " + ($sp.total | money)
+             + (" " + (if $s.since then "since " + $s.since else "total" end) | dim)
              + (if ($now - ($s.generatedAt // 0)) > 120 then " " + ("stale" | paint("31")) else "" end)
        end) as $spend
 
