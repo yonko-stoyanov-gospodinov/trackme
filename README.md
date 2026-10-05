@@ -3,7 +3,7 @@
 A macOS menu bar app and desktop widget that shows what your Claude Code sessions cost, for pay-per-token API use.
 
 - **Desktop widget:** today, 7-day and 30-day spend, active sessions, sitting on the desktop under your windows, with tabs to switch between customers. Drag it anywhere; it remembers the spot. Right-click it to refresh, keep it on top of other windows, or hide it.
-- **Menu bar:** a cat icon with a menu of the settings (prices, keep awake, launch at login, show the widget again, quit).
+- **Menu bar:** a paw print icon with a menu of the settings (prices, keep awake, launch at login, show the widget again, quit).
 - **Keep awake:** holds off system sleep while a Claude Code session is working, and for a few minutes after, so a long task is not cut off when you walk away. The screen still locks.
 - **Status line:** a script for Claude Code's status line that shows the context fill, model, folder, git branch, and the customer's spend today and in total, taken from the app.
 
