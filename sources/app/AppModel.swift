@@ -185,6 +185,7 @@ final class AppModel: ObservableObject {
                 model.priceProblem = problem
                 model.usingCustomPrices = custom
                 if let fresh = result { model.snapshot = fresh }
+                model.writeStatusSummary()
                 if model.refreshQueued {
                     model.refreshQueued = false
                     model.refresh()
@@ -420,6 +421,20 @@ final class AppModel: ObservableObject {
 
     static var pricesPath: String {
         return (supportFolder as NSString).appendingPathComponent("prices.json")
+    }
+
+    // MARK: Status line
+
+    /// Where the totals for `scripts/statusline.sh` are written after every scan.
+    static var statusSummaryPath: String {
+        return (supportFolder as NSString).appendingPathComponent("status.json")
+    }
+
+    /// Exports the current snapshot for the status line script. Written on every refresh,
+    /// even when nothing changed, so the script can tell that the app is running.
+    private func writeStatusSummary() {
+        if loading { return }
+        try? StatusSummary(snapshot: snapshot, now: now).write(to: AppModel.statusSummaryPath)
     }
 
     /// Opens prices.json in the default editor, creating it from the built-in table first.

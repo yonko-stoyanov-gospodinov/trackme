@@ -1,6 +1,6 @@
 import Foundation
 
-// Engine tests. They run on any platform with a Swift compiler: ./Tests/run.sh
+// Engine tests. They run on any platform with a Swift compiler: ./tests/run.sh
 
 var failures = 0
 var checks = 0
@@ -434,6 +434,39 @@ do {
     try! store.apply(payload("SessionEnd"), now: soon)
     check(store.load("s1") == nil, "session end removes the file")
     check(store.load("../x") == nil, "odd id does not escape the folder")
+}
+
+// MARK: Status summary for the status line script
+
+do {
+    var snap = Snapshot()
+    snap.today = Totals(cost: 5.5, tokens: 10, requests: 2)
+    snap.all = Totals(cost: 300, tokens: 100, requests: 20)
+    snap.customers = [
+        CustomerTotals(name: "vm", today: Totals(cost: 3.2), all: Totals(cost: 148.4)),
+        CustomerTotals(name: nil, today: Totals(cost: 0.5), all: Totals(cost: 9)),
+    ]
+    var vm = SessionSummary(id: "p/s1", sessionId: "s1", projectDir: "p")
+    vm.name = "vm: status line"
+    let other = SessionSummary(id: "p/s2", sessionId: "s2", projectDir: "p")
+    snap.sessions = [vm, other]
+    let summary = StatusSummary(snapshot: snap, now: Date(timeIntervalSince1970: 1000))
+    check(summary.generatedAt == 1000, "generated stamp")
+    check(summary.all == StatusSummary.Spend(today: 5.5, total: 300), "overall spend")
+    check(summary.customers["vm"] == StatusSummary.Spend(today: 3.2, total: 148.4), "customer spend")
+    check(summary.customers["Other"] == StatusSummary.Spend(today: 0.5, total: 9), "unnamed sessions are Other")
+    check(summary.sessions == ["s1": "vm", "s2": "Other"], "session to customer map: \(summary.sessions)")
+    let path = root + "/status/status.json"
+    try! summary.write(to: path)
+    let object = try! JSONSerialization.jsonObject(with: fm.contents(atPath: path)!) as! [String: Any]
+    let customers = object["customers"] as! [String: [String: Double]]
+    check(customers["vm"]?["today"] == 3.2 && customers["vm"]?["total"] == 148.4, "customers in the file")
+    check((object["sessions"] as! [String: String])["s1"] == "vm", "sessions in the file")
+    check((object["generatedAt"] as! NSNumber).doubleValue == 1000, "stamp in the file")
+    check((object["all"] as! [String: Double])["total"] == 300, "overall totals in the file")
+    let text = String(data: try! summary.json(), encoding: .utf8)!
+    check(text == String(data: try! summary.json(), encoding: .utf8)!, "stable output")
+    check(text.hasPrefix("{\"all\""), "keys sorted: \(text.prefix(20))")
 }
 
 // MARK: Hook settings
