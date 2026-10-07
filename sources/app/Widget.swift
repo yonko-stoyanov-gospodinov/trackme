@@ -1,71 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// A borderless panel that sits on the desktop, under normal windows, like a widget.
-final class WidgetPanel: NSPanel {
+/// The look shared by the widget popover, the hints and the dialogs.
+enum Widget {
     static let width: CGFloat = 320
     static let cornerRadius: CGFloat = 18
     /// The dark frosted glass of HUD panels, whatever the system appearance.
     static let material: NSVisualEffectView.Material = .hudWindow
-
-    /// `menu` builds the context menu for a right click; it is the menu bar menu.
-    init(model: AppModel, menu: @escaping () -> NSMenu) {
-        // The panel is as tall as its content, so the margins match top and bottom.
-        let hosting = WidgetHostingView(rootView: WidgetView(model: model))
-        hosting.contextMenu = menu
-        let size = NSSize(width: WidgetPanel.width, height: ceil(hosting.fittingSize.height))
-        super.init(contentRect: NSRect(origin: .zero, size: size),
-                   styleMask: [.borderless, .nonactivatingPanel],
-                   backing: .buffered, defer: false)
-        setOnTop(model.widgetOnTop)
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = true
-        hidesOnDeactivate = false
-        // The HUD material has a fixed tint; fading the whole panel lets more of the desktop through.
-        alphaValue = 0.82
-
-        let effect = NSVisualEffectView()
-        effect.material = WidgetPanel.material
-        effect.blendingMode = .behindWindow
-        effect.state = .active
-        // The HUD material is dark whatever the system appearance, so the text follows it.
-        effect.appearance = NSAppearance(named: .darkAqua)
-        // A behind-window blur is drawn by the window server over the whole window rectangle,
-        // so rounding the layer leaves square corners; a mask image clips the blur and the shadow.
-        effect.maskImage = WidgetPanel.roundedMask(radius: WidgetPanel.cornerRadius)
-
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        effect.addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
-            hosting.topAnchor.constraint(equalTo: effect.topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
-        ])
-        contentView = effect
-
-        // Remember where the user dragged it; the first time, put it in the top right corner.
-        if setFrameUsingName("trackme.widget") {
-            // The saved frame may be from a version with a different size.
-            let top = frame.maxY
-            setContentSize(size)
-            setFrameOrigin(NSPoint(x: frame.minX, y: top - size.height))
-        } else if let screen = NSScreen.main?.visibleFrame {
-            setFrameOrigin(NSPoint(x: screen.maxX - size.width - 20, y: screen.maxY - size.height - 20))
-        }
-        setFrameAutosaveName("trackme.widget")
-        invalidateShadow()
-    }
-
-    /// Above every normal window, or on the desktop just over the icons.
-    func setOnTop(_ onTop: Bool) {
-        level = onTop ? .floating : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
-    }
-
-    override var canBecomeKey: Bool { return false }
-    override var canBecomeMain: Bool { return false }
 
     /// A stretchable rounded-rectangle mask: only the corners are fixed, the middle scales.
     static func roundedMask(radius: CGFloat) -> NSImage {
@@ -81,14 +22,12 @@ final class WidgetPanel: NSPanel {
     }
 }
 
-/// Takes the first click even though the panel never becomes key, so the tabs work.
-/// Moving the window is a gesture in the view, not a window-background drag, because a
-/// background drag would take every mouse-down and the tabs would never get one.
-/// A right click or a control-click shows the context menu, built fresh each time.
+/// Hosts the widget content in the popover under the menu bar item. Takes the first click so
+/// the tabs work as soon as the popover opens. A right click or a control-click shows the
+/// context menu, built fresh each time.
 final class WidgetHostingView<Content: View>: NSHostingView<Content> {
     var contextMenu: (() -> NSMenu)?
 
-    override var mouseDownCanMoveWindow: Bool { return false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { return true }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -110,10 +49,9 @@ final class WidgetHostingView<Content: View>: NSHostingView<Content> {
     }
 }
 
+/// The widget's content: the spend of the chosen customer and who is working.
 struct WidgetView: View {
     @ObservedObject var model: AppModel
-
-    @StateObject private var dragStart = LocalState<(mouse: NSPoint, origin: NSPoint)?>(nil)
 
     private var activeCount: Int {
         return model.snapshot.sessions.filter { model.isActive($0) }.count
@@ -173,25 +111,7 @@ struct WidgetView: View {
         }
         .foregroundColor(Theme.ink)
         .padding(16)
-        .frame(width: WidgetPanel.width)
-        .contentShape(Rectangle())
-        .gesture(windowDrag)
-    }
-
-    /// Moves the panel with the mouse. Screen coordinates are used because the view's own
-    /// coordinates move along with the window.
-    private var windowDrag: some Gesture {
-        DragGesture(minimumDistance: 2, coordinateSpace: .global)
-            .onChanged { _ in
-                HintWindow.shared.hide()
-                guard let window = NSApp.windows.first(where: { $0 is WidgetPanel }) else { return }
-                let mouse = NSEvent.mouseLocation
-                let start = dragStart.value ?? (mouse, window.frame.origin)
-                dragStart.value = start
-                window.setFrameOrigin(NSPoint(x: start.origin.x + mouse.x - start.mouse.x,
-                                              y: start.origin.y + mouse.y - start.mouse.y))
-            }
-            .onEnded { _ in dragStart.value = nil }
+        .frame(width: Widget.width)
     }
 }
 

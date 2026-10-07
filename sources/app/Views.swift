@@ -78,8 +78,8 @@ struct IconButton: View {
     }
 }
 
-/// System tooltips only show for the frontmost app, and the widget never activates, so it
-/// draws its own: a small glass label near the pointer after a short hover.
+/// Hover hints for the popover, drawn by the app itself so they match its glass: a small
+/// label near the pointer after a short hover.
 final class HintWindow {
     static let shared = HintWindow()
 
@@ -100,11 +100,11 @@ final class HintWindow {
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
 
         let glass = NSVisualEffectView()
-        glass.material = WidgetPanel.material
+        glass.material = Widget.material
         glass.blendingMode = .behindWindow
         glass.state = .active
         glass.appearance = NSAppearance(named: .darkAqua)
-        glass.maskImage = WidgetPanel.roundedMask(radius: 6)
+        glass.maskImage = Widget.roundedMask(radius: 6)
         label = NSTextField(wrappingLabelWithString: "")
         label.font = NSFont.systemFont(ofSize: 11)
         label.textColor = NSColor(white: 0.96, alpha: 1)

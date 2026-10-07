@@ -1,42 +1,102 @@
 import AppKit
+import Combine
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private let menu = NSMenu()
     private let model = AppModel()
-    private var widget: WidgetPanel?
+    private var popover: NSPopover?
+    private var titleObserver: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem = item
         if let button = item.button {
-            // pawprint.fill is available since macOS 12, so no fallback is needed.
-            button.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "Claude Code usage")
-            button.imagePosition = .imageOnly
+            // No icon: the item is the spend of the chosen customer, as text.
+            button.setAccessibilityLabel("Claude Code usage")
+            button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .regular)
+            // A left click pops the widget up under the item, a right click opens the menu. The
+            // menu is not attached to the item, because then every click would open it.
+            button.target = self
+            button.action = #selector(statusItemClicked)
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         menu.delegate = self
-        item.menu = menu
-
-        model.onWidgetChange = { [weak self] visible in
-            self?.setWidgetVisible(visible)
-        }
-        model.onWidgetLevelChange = { [weak self] onTop in
-            self?.widget?.setOnTop(onTop)
-        }
-        setWidgetVisible(model.showWidget)
+        // objectWillChange fires before the model changes; the hop to the next run loop pass
+        // reads the new values.
+        titleObserver = model.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateTitle() }
+        updateTitle()
         model.start()
     }
 
-    private func setWidgetVisible(_ visible: Bool) {
-        if visible {
-            if widget == nil {
-                widget = WidgetPanel(model: model, menu: { [unowned self] in self.contextMenu() })
-            }
-            widget?.orderFront(nil)
-        } else {
-            widget?.orderOut(nil)
+    /// The spend of the customer chosen in the popover, all time or since the chosen day, as
+    /// in the status line. An ellipsis until the first scan is done, so the item has a width.
+    private func updateTitle() {
+        guard let button = statusItem?.button else { return }
+        if model.snapshot.generatedAt == 0 {
+            button.title = "…"
+            return
         }
+        let total = model.sinceTotals ?? model.totals(.all)
+        button.title = Format.money(total.cost)
+    }
+
+    // MARK: Menu bar item
+
+    @objc private func statusItemClicked() {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            showMenu()
+        } else {
+            togglePopover()
+        }
+    }
+
+    /// Attaching the menu makes the button track it like a normal status item; it is detached
+    /// again right after so that the next left click reaches the action.
+    private func showMenu() {
+        guard let item = statusItem else { return }
+        popover?.close()
+        item.menu = menu
+        item.button?.performClick(nil)
+        item.menu = nil
+    }
+
+    /// The widget in a popover under the item, closed by a click anywhere else.
+    private func togglePopover() {
+        guard let button = statusItem?.button else { return }
+        if let popover = popover, popover.isShown {
+            popover.close()
+            return
+        }
+        let popover = self.popover ?? makePopover()
+        self.popover = popover
+        model.refresh()
+        // A transient popover of an app that is not active does not close on an outside click.
+        NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+
+    private func makePopover() -> NSPopover {
+        let hosting = WidgetHostingView(rootView: WidgetView(model: model))
+        hosting.contextMenu = { [unowned self] in self.contextMenu() }
+        let controller = NSViewController()
+        controller.view = hosting
+        let popover = NSPopover()
+        popover.contentViewController = controller
+        popover.contentSize = NSSize(width: Widget.width, height: ceil(hosting.fittingSize.height))
+        popover.behavior = .transient
+        popover.animates = true
+        // The same dark glass as the hints and the dialogs.
+        popover.appearance = NSAppearance(named: .darkAqua)
+        popover.delegate = self
+        return popover
+    }
+
+    func popoverWillClose(_ notification: Notification) {
+        HintWindow.shared.hide()
     }
 
     // MARK: Menu bar menu
@@ -46,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         fill(menu)
     }
 
-    /// The same menu, for a right click on the widget.
+    /// The same menu, for a right click inside the popover.
     private func contextMenu() -> NSMenu {
         let menu = NSMenu()
         fill(menu)
@@ -72,11 +132,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
 
         add("Refresh now", #selector(refresh))
-        let onTop = NSMenuItem(title: "On top", action: #selector(toggleOnTop), keyEquivalent: "")
-        onTop.target = self
-        onTop.state = model.widgetOnTop ? .on : .off
-        menu.addItem(onTop)
-        add(model.showWidget ? "Hide" : "Show", #selector(toggleWidget))
         menu.addItem(.separator())
         add("Customers…", #selector(editCustomers))
         add("Since…", #selector(chooseSince))
@@ -136,9 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func refresh() { model.refresh() }
-    @objc private func toggleWidget() { model.showWidget.toggle() }
     @objc private func editCustomers() { model.editCustomers() }
-    @objc private func toggleOnTop() { model.widgetOnTop.toggle() }
     @objc private func chooseSince() { model.chooseSince() }
     @objc private func resetSince() { model.resetSince() }
     @objc private func editPrices() { model.editPrices() }
