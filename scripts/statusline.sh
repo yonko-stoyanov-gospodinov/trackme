@@ -1,8 +1,7 @@
 #!/bin/sh
 # Claude Code status line: context fill, model, and the spend of the session's customer
 # (today and all time, or since the day chosen in the app) as computed by the trackme app on
-# the first line; the folder and git
-# branch, with a tick for a clean tree, on the second.
+# the first line; the folder and git branch, with a tick for a clean tree, on the second.
 #
 #   ./statusline.sh install    point Claude Code's statusLine setting at this script
 #   ./statusline.sh remove     take it out again
@@ -71,9 +70,8 @@ printf '%s' "$input" | jq -r --slurpfile st "$status" --arg branch "$branch" --a
     (.context_window // {}) as $cw
     | ($cw.used_percentage) as $pct
     | ($cw.current_usage // {} | ((.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0))) as $used
-    | (if $pct == null then "▯▯▯▯▯▯▯▯▯▯ –" | dim
-       else (($pct / 10 | round) as $n
-             | ("▮" * $n // "") + ("▯" * (10 - $n) // "") + " " + ($pct | round | tostring) + "%"
+    | (if $pct == null then "–%" | dim
+       else (($pct | round | tostring) + "%"
              | paint(if $pct < 50 then "32" elif $pct < 80 then "33" else "31" end))
             + (if $cw.context_window_size then " " + (($used | k) + "/" + ($cw.context_window_size | k) | dim) else "" end)
        end) as $context
