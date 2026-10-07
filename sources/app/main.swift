@@ -5,7 +5,7 @@ if CommandLine.arguments.dropFirst().contains("--hook") {
     HookCommand.run()
 }
 
-// Menu bar app with an optional desktop widget: no Dock icon, no main window.
+// Menu bar app with a widget popover: no Dock icon, no main window.
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

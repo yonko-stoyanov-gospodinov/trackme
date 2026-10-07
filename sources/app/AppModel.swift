@@ -71,23 +71,6 @@ final class AppModel: ObservableObject {
     @Published var priceProblem: String?
     @Published var usingCustomPrices = false
     @Published var launchAtLogin = false
-    @Published var showWidget: Bool {
-        didSet {
-            UserDefaults.standard.set(showWidget, forKey: "showWidget")
-            onWidgetChange?(showWidget)
-        }
-    }
-    /// Whether the widget floats above other windows or sits on the desktop under them.
-    @Published var widgetOnTop: Bool {
-        didSet {
-            UserDefaults.standard.set(widgetOnTop, forKey: "widgetOnTop")
-            onWidgetLevelChange?(widgetOnTop)
-        }
-    }
-
-    var onWidgetChange: ((Bool) -> Void)?
-    var onWidgetLevelChange: ((Bool) -> Void)?
-
     // MARK: Keep awake settings
 
     /// Hold off system sleep while a Claude Code session is working.
@@ -139,8 +122,6 @@ final class AppModel: ObservableObject {
             since = Date(timeIntervalSince1970: stamp)
         }
         launchAtLogin = FileManager.default.fileExists(atPath: AppModel.launchAgentPath)
-        showWidget = UserDefaults.standard.object(forKey: "showWidget") as? Bool ?? true
-        widgetOnTop = UserDefaults.standard.bool(forKey: "widgetOnTop")
         keepAwake = UserDefaults.standard.object(forKey: "keepAwake") as? Bool ?? true
         keepAwakeOnBattery = UserDefaults.standard.bool(forKey: "keepAwakeOnBattery")
         keepAwakeWhileWaiting = UserDefaults.standard.bool(forKey: "keepAwakeWhileWaiting")
@@ -584,10 +565,10 @@ enum GlassDialog {
         let height = titleBar + margin + content.frame.height + 16 + (controls.first?.frame.height ?? 0) + margin
 
         let glass = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
-        glass.material = WidgetPanel.material
+        glass.material = Widget.material
         glass.blendingMode = .behindWindow
         glass.state = .active
-        glass.maskImage = WidgetPanel.roundedMask(radius: WidgetPanel.cornerRadius)
+        glass.maskImage = Widget.roundedMask(radius: Widget.cornerRadius)
         let label = NSTextField(labelWithString: title.uppercased())
         label.font = NSFont.systemFont(ofSize: 9.5, weight: .semibold)
         label.textColor = .secondaryLabelColor

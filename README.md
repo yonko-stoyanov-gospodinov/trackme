@@ -1,9 +1,10 @@
 # trackme
 
-A macOS menu bar app and desktop widget that shows what your Claude Code sessions cost, for pay-per-token API use.
+A macOS menu bar app that shows what your Claude Code sessions cost, for pay-per-token API use.
 
-- **Desktop widget:** today, 7-day and 30-day spend, active sessions, sitting on the desktop under your windows, with tabs to switch between customers. Drag it anywhere; it remembers the spot. Right-click it to refresh, keep it on top of other windows, or hide it.
-- **Menu bar:** a paw print icon with a menu of the settings (prices, keep awake, launch at login, show the widget again, quit).
+- **Menu bar:** the spend of the chosen customer, all time or since the chosen day, as the menu bar item itself.
+- **Widget:** click the figure for a popup with today, 7-day and 30-day spend and the active sessions, with tabs to switch between customers. It closes when you click anywhere else.
+- **Menu:** right-click the figure for the settings (customers, since day, prices, keep awake, launch at login, quit). The same menu opens on a right-click inside the popup.
 - **Keep awake:** holds off system sleep while a Claude Code session is working, and for a few minutes after, so a long task is not cut off when you walk away. The screen still locks.
 - **Status line:** a script for Claude Code's status line that shows the context fill, model, folder, git branch, and the customer's spend today and in total, taken from the app.
 
@@ -74,11 +75,11 @@ Two guards keep a crashed session from holding the Mac awake forever: the hook r
 `scripts/statusline.sh` is a Claude Code status line. It prints two lines:
 
 ```
-▮▮▮▮▯▯▯▯▯▯ 42% 84K/200K │ Opus │ vm $3.20 today · $148.40 total
+42% 84K/200K │ Opus │ vm $3.20 today · $148.40 total
 ~/devtools/trackme (main ✔)
 ```
 
-The first line is the context window fill (bar, percent, tokens used of the window; green under 50%, yellow under 80%, red above), the model, and the spend of the session's customer today and over all the transcripts kept (or since the day chosen with **Since…**, which the line then names). The second is the folder Claude Code runs in, with the home folder shortened to `~`, and the git branch with ✔ for a clean tree or ✗ when there are uncommitted changes. Install it with
+The first line is the context window fill (percent and tokens used of the window; green under 50%, yellow under 80%, red above), the model, and the spend of the session's customer today and over all the transcripts kept (or since the day chosen with **Since…**, which the line then names). The second is the folder Claude Code runs in, with the home folder shortened to `~`, and the git branch with ✔ for a clean tree or ✗ when there are uncommitted changes. Install it with
 
 ```sh
 ./scripts/statusline.sh install
@@ -109,7 +110,7 @@ Each entry's `match` is looked for inside the model ID, and the longest match wi
 
 ```
 sources/core   engine: parsing, prices, totals, hook states, settings merge, status line export (no UI; builds on any platform)
-sources/app    menu bar item, desktop widget, views, sleep assertion, hook command
+sources/app    menu bar item, widget popover, views, sleep assertion, hook command
 tests          engine tests with hand-computed expected totals; tests/run.sh compiles and runs them
 scripts        start scripts that name a session after a customer, and the Claude Code status line
 build.sh       compiles and packages the .app
