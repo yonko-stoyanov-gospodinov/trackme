@@ -41,43 +41,6 @@ struct Eyebrow: View {
     }
 }
 
-/// A value a view owns for its lifetime, in place of `@State`. On newer macOS 26 SDKs (Swift 6.4)
-/// `@State` is a compiler macro whose plugin ships only with Xcode, so a Mac with just the
-/// command line tools cannot expand it. `@StateObject` is an ordinary property wrapper and
-/// gives the same per-view storage.
-final class LocalState<Value>: ObservableObject {
-    @Published var value: Value
-
-    init(_ value: Value) {
-        self.value = value
-    }
-}
-
-/// A small symbol that acts as a button and brightens on hover.
-struct IconButton: View {
-    let symbol: String
-    let help: String
-    let action: () -> Void
-
-    @StateObject private var hovering = LocalState(false)
-
-    var body: some View {
-        Button(action: action) {
-            // Symbols differ in shape, so each is centred in the same box to line up in a row.
-            Image(systemName: symbol)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .foregroundColor(hovering.value ? Theme.ink : Theme.accent)
-                .frame(width: 12, height: 12)
-                .frame(width: 18, height: 18, alignment: .center)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-        .onHover { inside in hovering.value = inside }
-        .hint(help)
-    }
-}
-
 /// Hover hints for the popover, drawn by the app itself so they match its glass: a small
 /// label near the pointer after a short hover.
 final class HintWindow {

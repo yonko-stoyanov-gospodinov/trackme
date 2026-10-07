@@ -297,8 +297,7 @@ final class AppModel: ObservableObject {
 
     /// Reads the hook state files and decides whether the Mac must stay awake.
     private func updateWorkStates() {
-        stateStore.prune(now: now, alive: Processes.isAlive)
-        let states = stateStore.loadAll()
+        let states = stateStore.prune(now: now, alive: Processes.isAlive)
         let busy = states.filter {
             SessionStateStore.isBusy($0, includeWaiting: keepAwakeWhileWaiting, now: now, alive: Processes.isAlive)
         }
@@ -613,25 +612,6 @@ enum GlassDialog {
 }
 
 enum Dates {
-    static let time: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        return f
-    }()
-
-    static let dayTime: DateFormatter = {
-        let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate("MMMdjm")
-        return f
-    }()
-
-    static let day: DateFormatter = {
-        let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate("EEEMMMd")
-        return f
-    }()
-
     static let calendarDay: DateFormatter = {
         let f = DateFormatter()
         f.setLocalizedDateFormatFromTemplate("yMMMd")
@@ -644,12 +624,4 @@ enum Dates {
         f.timeStyle = .medium
         return f
     }()
-
-    static func when(_ seconds: Double) -> String {
-        let date = Date(timeIntervalSince1970: seconds)
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today " + time.string(from: date) }
-        if calendar.isDateInYesterday(date) { return "Yesterday " + time.string(from: date) }
-        return dayTime.string(from: date)
-    }
 }

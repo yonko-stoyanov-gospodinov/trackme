@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
     private let menu = NSMenu()
     private let model = AppModel()
     private var popover: NSPopover?
+    private var outsideClick: Any?
     private var titleObserver: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -74,9 +75,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSPopo
         let popover = self.popover ?? makePopover()
         self.popover = popover
         model.refresh()
-        // A transient popover of an app that is not active does not close on an outside click.
+        // A transient popover only closes itself on an outside click while the app is active,
+        // and since macOS 14 this request is often refused when another app is in front. The
+        // global monitor installed in popoverDidShow closes it whatever the activation did.
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+
+    /// Clicks in other apps never reach this app's event queue, so they are watched globally.
+    /// Clicks inside the app (the popover, the menu bar item) are handled as before.
+    func popoverDidShow(_ notification: Notification) {
+        outsideClick = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) {
+            [weak self] _ in
+            self?.popover?.close()
+        }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        if let monitor = outsideClick {
+            NSEvent.removeMonitor(monitor)
+            outsideClick = nil
+        }
     }
 
     private func makePopover() -> NSPopover {
