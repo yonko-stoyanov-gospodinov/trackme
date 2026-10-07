@@ -41,8 +41,4 @@ enum Format {
         if hours < 24 { return "\(hours)h \(minutes % 60)m" }
         return "\(hours / 24)d \(hours % 24)h"
     }
-
-    static func percent(_ fraction: Double) -> String {
-        return String(format: "%.0f%%", fraction * 100)
-    }
 }

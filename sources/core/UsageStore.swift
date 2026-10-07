@@ -133,18 +133,22 @@ final class UsageStore {
         let fm = FileManager.default
         var seen = Set<String>()
 
+        // The attributes are fetched in bulk during the walk, so no file is stat'ed twice.
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey]
         for root in roots {
             let projects = (root as NSString).appendingPathComponent("projects")
-            guard let walker = fm.enumerator(atPath: projects) else { continue }
-            while let relative = walker.nextObject() as? String {
+            guard let walker = fm.enumerator(at: URL(fileURLWithPath: projects, isDirectory: true),
+                                             includingPropertiesForKeys: Array(keys),
+                                             options: [.producesRelativePathURLs]) else { continue }
+            while let url = walker.nextObject() as? URL {
+                let relative = url.relativePath
                 if !relative.hasSuffix(".jsonl") { continue }
                 pooled {
                     guard let identity = UsageStore.identify(relativePath: relative) else { return }
+                    guard let values = try? url.resourceValues(forKeys: keys), values.isRegularFile == true else { return }
                     let path = (projects as NSString).appendingPathComponent(relative)
-                    guard let attributes = try? fm.attributesOfItem(atPath: path) else { return }
-                    if let kind = attributes[.type] as? FileAttributeType, kind != .typeRegular { return }
-                    let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
-                    let modified = (attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+                    let size = values.fileSize ?? 0
+                    let modified = values.contentModificationDate?.timeIntervalSince1970 ?? 0
                     seen.insert(path)
 
                     let record: FileRecord
@@ -318,6 +322,8 @@ final class UsageStore {
         var times: [Double] = []
         var hasMainFile = false
         var titleRank = -1
+        /// Read once the labels are final, so the name is not split for every response.
+        lazy var customer: String? = summary.customer
         init(summary: SessionSummary) { self.summary = summary }
     }
 
@@ -425,7 +431,7 @@ final class UsageStore {
             totals.requests += 1
             dayTotals[dayStart] = totals
 
-            let customer = b.summary.customer
+            let customer = b.customer
             var customerTotals = customerDayTotals[customer]?[dayStart] ?? Totals()
             customerTotals.cost += cost
             customerTotals.tokens += entry.tokens.total

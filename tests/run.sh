@@ -3,5 +3,5 @@
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p build
-"${SWIFTC:-swiftc}" -swift-version 5 -O -o build/core-tests sources/core/*.swift tests/main.swift
+"${SWIFTC:-swiftc}" -swift-version 5 -O -wmo -o build/core-tests sources/core/*.swift tests/main.swift
 ./build/core-tests

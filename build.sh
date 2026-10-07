@@ -28,7 +28,7 @@ mkdir -p "$APP/Contents/MacOS"
 } > "$LOG"
 
 echo "Compiling..."
-if ! swiftc -swift-version 5 -O \
+if ! swiftc -swift-version 5 -O -wmo \
         -target "$(uname -m)-apple-macos12.0" \
         -o "$APP/Contents/MacOS/trackme" \
         sources/core/*.swift sources/app/*.swift >> "$LOG" 2>&1; then

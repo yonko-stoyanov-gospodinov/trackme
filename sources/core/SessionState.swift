@@ -148,12 +148,16 @@ final class SessionStateStore {
     }
 
     /// Deletes the files of sessions whose process is gone or whose last report is older than a day.
-    func prune(now: Date = Date(), alive: (Int32) -> Bool) {
+    /// Returns the sessions kept, most recent first, so the caller need not read the folder again.
+    @discardableResult
+    func prune(now: Date = Date(), alive: (Int32) -> Bool) -> [SessionState] {
+        var kept: [SessionState] = []
         for state in loadAll() {
             let old = now.timeIntervalSince1970 - state.at > 24 * 3600
             let dead = state.pid != 0 && !alive(state.pid)
-            if old || dead { remove(state.sessionId) }
+            if old || dead { remove(state.sessionId) } else { kept.append(state) }
         }
+        return kept
     }
 
     /// Whether the session is doing something that should keep the Mac awake.

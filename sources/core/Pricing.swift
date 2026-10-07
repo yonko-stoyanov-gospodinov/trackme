@@ -34,7 +34,13 @@ struct PriceFile: Codable, Equatable {
 /// Looks up prices by model id and turns token counts into dollars.
 final class PriceTable {
     let file: PriceFile
-    private var cache: [String: ModelPrice?] = [:]
+
+    /// What one model id resolves to; computed once per id, as the ids repeat on every rebuild.
+    private struct Match {
+        var price: ModelPrice?
+        var fastSuffix: Bool       // the id itself ends in "-fast"
+    }
+    private var cache: [String: Match] = [:]
 
     init(file: PriceFile) {
         self.file = file
@@ -52,6 +58,10 @@ final class PriceTable {
     /// The longest `match` contained in the model id wins. A match is rejected when it is
     /// followed by a minor version ("claude-opus-5" must not price "claude-opus-5-7").
     func price(for model: String) -> ModelPrice? {
+        return match(for: model).price
+    }
+
+    private func match(for model: String) -> Match {
         if let hit = cache[model] { return hit }
         let id = model.lowercased()
         var best: ModelPrice?
@@ -63,8 +73,9 @@ final class PriceTable {
             if let b = best, b.match.count >= needle.count { continue }
             best = candidate
         }
-        cache[model] = best
-        return best
+        let found = Match(price: best, fastSuffix: id.hasSuffix("-fast"))
+        cache[model] = found
+        return found
     }
 
     static func isFollowedByMinorVersion(_ rest: Substring) -> Bool {
@@ -82,8 +93,9 @@ final class PriceTable {
     /// Returns nil when the model has no price and the transcript recorded no cost either.
     func cost(of entry: UsageEntry) -> CostParts? {
         var parts = CostParts()
-        if let p = price(for: entry.model) {
-            let isFast = entry.fast || entry.model.lowercased().hasSuffix("-fast")
+        let found = match(for: entry.model)
+        if let p = found.price {
+            let isFast = entry.fast || found.fastSuffix
             let m = (isFast ? (p.fastMultiplier ?? 1.0) : 1.0) / 1_000_000.0
             let t = entry.tokens
             parts.input = Double(t.input) * p.input * m
