@@ -57,6 +57,7 @@ fi
 printf '%s' "$input" | jq -r --slurpfile st "$status" --arg branch "$branch" --arg dirty "$dirty" --arg home "$HOME" --argjson now "$(date +%s)" '
     def dim: "\u001b[2m" + . + "\u001b[0m";
     def bold: "\u001b[1m" + . + "\u001b[0m";
+    def white: "\u001b[97m" + . + "\u001b[0m";
     def paint($c): "\u001b[" + $c + "m" + . + "\u001b[0m";
     def k: if . >= 1000000 then ((. / 100000 | round) / 10 | tostring | sub("\\.0$"; "")) + "M"
            elif . >= 1000 then ((. / 1000) | round | tostring) + "K"
@@ -73,7 +74,7 @@ printf '%s' "$input" | jq -r --slurpfile st "$status" --arg branch "$branch" --a
     | (if $pct == null then "–%" | dim
        else (($pct | round | tostring) + "%"
              | paint(if $pct < 50 then "32" elif $pct < 80 then "33" else "31" end))
-            + (if $cw.context_window_size then " " + (($used | k) + "/" + ($cw.context_window_size | k) | dim) else "" end)
+            + (if $cw.context_window_size then " " + (($used | k) + "/" + ($cw.context_window_size | k) | white) else "" end)
        end) as $context
 
     | (.model.display_name // .model.id // "?" | bold) as $model
@@ -95,8 +96,8 @@ printf '%s' "$input" | jq -r --slurpfile st "$status" --arg branch "$branch" --a
            ((.cost.total_cost_usd // 0 | money) + " this session" | dim) + " " + ("trackme not running" | paint("31"))
        else
            ($s.customers[$customer] // {today: 0, total: 0}) as $sp
-           | ($customer | bold) + " " + ($sp.today | money) + (" today" | dim) + " · " + ($sp.total | money)
-             + (" " + (if $s.since then "since " + $s.since else "total" end) | dim)
+           | ($customer | bold) + " " + ($sp.today | money | white) + " today" + " · " + ($sp.total | money | white)
+             + " " + (if $s.since then "since " + $s.since else "total" end)
              + (if ($now - ($s.generatedAt // 0)) > 120 then " " + ("stale" | paint("31")) else "" end)
        end) as $spend
 
